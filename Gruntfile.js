@@ -6,8 +6,8 @@ module.exports = function(grunt) {
     grunt.initConfig({
         uglify: {
             build: {
-                src: 'src/H.js',
-                dest: 'bin/H.min.js'
+                src: 'src/O.js',
+                dest: 'bin/O.min.js'
             }
         }
     });
