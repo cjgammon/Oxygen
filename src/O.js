@@ -315,7 +315,7 @@ O.Sprite = function (t) {
     mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
     mat4.identity(mvMatrix);
 
-    mat4.translate(mvMatrix, mvMatrix, [inst.x, inst.y, 0]);
+    mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
     //mat4.translate(mvMatrix, [inst.ox, inst.oy, 0]);
     //mat4.rotate(mvMatrix, inst.r);
     //mat4.scale(mvMatrix, [inst._sx, inst._sy, 1]);
