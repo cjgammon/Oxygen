@@ -202,6 +202,44 @@ O.Sprite = function (t) {
       shaderProgram,
       gl;
 
+  this.ox = 0;
+  this.oy = 0;
+  this.x = 0;
+  this.y = 0;
+  this._sx = 1;
+  this._sy = 1;
+  this.r = 0;
+
+  Object.defineProperties(inst, {
+    "s": {
+      "get": function() {
+        return inst._sx;
+      },
+      "set": function(s) {
+          inst._sx = s;
+          inst._sy = s;
+      }
+    },
+    "sx": {
+      "get": function () {
+        return inst._sx;
+      },
+       "set": function (sx) {
+          inst._sx = sx;
+       }
+    },
+    "sy": {
+      "get": function () {
+        return inst._sy;
+      },
+      "set": function (sy) {
+        inst._sy = sy;
+      }
+    }
+  });
+
+  this.tex = t;
+
   function init() {
     vertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
@@ -276,6 +314,13 @@ O.Sprite = function (t) {
     //position matrices
     mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
     mat4.identity(mvMatrix);
+
+    mat4.translate(mvMatrix, mvMatrix, [inst.x, inst.y, 0]);
+    //mat4.translate(mvMatrix, [inst.ox, inst.oy, 0]);
+    //mat4.rotate(mvMatrix, inst.r);
+    //mat4.scale(mvMatrix, [inst._sx, inst._sy, 1]);
+    //mat4.translate(mvMatrix, [-inst.x, -inst.y, 0]);
+    //mat4.translate(mvMatrix, [-inst.ox, -inst.oy, 0]);
 
     //draw sprite
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
