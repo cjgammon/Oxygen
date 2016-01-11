@@ -94,20 +94,26 @@ mat4.translate = function (out, a, v) {
 var O = {};
 O.SHADERS = {
   vert: "\
-      attribute vec3 aVertexPosition;\
-  \
-      uniform mat4 uMVMatrix;\
-      uniform mat4 uPMatrix;\
-  \
-      void main(void) {\
-          gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);\
-      }",
+    attribute vec3 aVertexPosition;\
+    attribute vec2 aTextureCoord;\
+\
+    uniform mat4 uMVMatrix;\
+    uniform mat4 uPMatrix;\
+\
+    varying vec2 vTextureCoord;\
+\
+    void main(void) {\
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);\
+        vTextureCoord = aTextureCoord;\
+    }",
   frag: "\
-      precision mediump float;\
-  \
-      void main(void) {\
-          gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);\
-      }"
+    precision mediump float;\
+    varying vec2 vTextureCoord;\
+    uniform sampler2D uSampler;\
+\
+    void main(void) {\
+        gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));\
+    }"
 };
 
 O.Canvas = function (w, h) {
@@ -199,6 +205,9 @@ O.Sprite = function (t) {
       vertexPositionBuffer,
       mvMatrix = mat4.create(),
       pMatrix = mat4.create(),
+      vertexPositionBuffer,
+      vertexTextureCoordBuffer,
+      vertexIndexBuffer,
       shaderProgram,
       gl;
 
@@ -238,24 +247,22 @@ O.Sprite = function (t) {
     }
   });
 
-  this.tex = t;
-
   function init() {
-    vertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
-    vertices = [
-        0.5,  0.5,  0.0,
-       -0.5,  0.5,  0.0,
-        0.5, -0.5,  0.0,
-       -0.5, -0.5,  0.0
-    ];
-
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    vertexPositionBuffer.itemSize = 3;
-    vertexPositionBuffer.numItems = 4;
 
     initShaders();
+    initBuffers();
+    initTexture();
   };
+
+  function initTexture() {
+      inst.tex = gl.createTexture();
+      inst.tex.image = new Image();
+      inst.tex.image.onload = function () {
+          handleLoadedTexture(inst.tex);
+      }
+
+      inst.tex.image.src = t.src;
+  }
 
   function getShader(type, str) {
 
@@ -283,12 +290,14 @@ O.Sprite = function (t) {
     var vertexShader = getShader('vert', O.SHADERS.vert);
 
     shaderProgram = gl.createProgram();
+
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
 
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      alert("Could not initialise shaders");
+      console.error("Could not initialise shaders");
+      console.error(gl.getProgramInfoLog(shaderProgram));
     }
 
     gl.useProgram(shaderProgram);
@@ -296,8 +305,55 @@ O.Sprite = function (t) {
     shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
     gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
 
+    shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+    gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+
     shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+  }
+
+  function handleLoadedTexture(texture) {
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
+  function initBuffers() {
+    vertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+    vertices = [
+        1,  1,  0.0,
+       -1,  1,  0.0,
+        1, -1,  0.0,
+       -1, -1,  0.0
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    vertexPositionBuffer.itemSize = 3;
+    vertexPositionBuffer.numItems = 4;
+
+    vertexTextureCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordBuffer);
+    var textureCoords = [
+        // Front face
+        1.0, 0.0,
+        0.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
+    vertexTextureCoordBuffer.itemSize = 2;
+    vertexTextureCoordBuffer.numItems = 6;
+
+    vertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
+    var vertexIndices = [
+      0, 1, 2,      0, 2, 3,    // Front face
+    ];
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexIndices), gl.STATIC_DRAW);
+    vertexIndexBuffer.itemSize = 1;
+    vertexIndexBuffer.numItems = 6;
   }
 
   inst.setParent = function (p) {
@@ -316,15 +372,19 @@ O.Sprite = function (t) {
     mat4.identity(mvMatrix);
 
     mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
-    //mat4.translate(mvMatrix, [inst.ox, inst.oy, 0]);
-    //mat4.rotate(mvMatrix, inst.r);
-    //mat4.scale(mvMatrix, [inst._sx, inst._sy, 1]);
-    //mat4.translate(mvMatrix, [-inst.x, -inst.y, 0]);
-    //mat4.translate(mvMatrix, [-inst.ox, -inst.oy, 0]);
 
     //draw sprite
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordBuffer);
+    gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, inst.tex);
+    gl.uniform1i(shaderProgram.samplerUniform, 0);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
 
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
