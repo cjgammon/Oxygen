@@ -147,7 +147,7 @@ O.Canvas = function (w, h) {
   function setupGL() {
     inst.gl.viewportWidth = inst.el.width;
     inst.gl.viewportHeight = inst.el.height;
-    inst.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    inst.gl.clearColor(1.0, 1.0, 1.0, 1.0);
     inst.gl.enable(inst.gl.DEPTH_TEST);
     inst.gl.depthFunc(inst.gl.LEQUAL);
   }
@@ -321,13 +321,13 @@ O.Sprite = function (t) {
   }
 
   function initBuffers() {
+    var aspect = inst.parent.w / inst.parent.h;
+
     vertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
     vertices = [
-        1,  1,  0.0,
-       -1,  1,  0.0,
-        1, -1,  0.0,
-       -1, -1,  0.0
+        1,  1,  0.0, -1,  1,  0.0,
+        1, -1,  0.0, -1, -1,  0.0
     ];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     vertexPositionBuffer.itemSize = 3;
