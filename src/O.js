@@ -199,6 +199,7 @@ O.Canvas = function (w, h) {
     inst.gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
   }
 
+  /*
   function initBuffers() {
     spriteVertexPositionBuffer = inst.gl.createBuffer();
     inst.gl.bindBuffer(inst.gl.ARRAY_BUFFER, spriteVertexPositionBuffer);
@@ -208,7 +209,7 @@ O.Canvas = function (w, h) {
         0.5, -0.5,  0.0,
        -0.5, -0.5,  0.0
     ];
-
+    */
     inst.gl.bufferData(inst.gl.ARRAY_BUFFER, new Float32Array(vertices), inst.gl.STATIC_DRAW);
     spriteVertexPositionBuffer.itemSize = 3;
     spriteVertexPositionBuffer.numItems = 4;
@@ -233,6 +234,7 @@ O.Canvas = function (w, h) {
   };
 
   inst.render = function () {
+    var i;
 
     inst.gl.viewport(0, 0, inst.gl.viewportWidth, inst.gl.viewportHeight);
     inst.gl.clear(inst.gl.COLOR_BUFFER_BIT | inst.gl.DEPTH_BUFFER_BIT);
@@ -246,26 +248,54 @@ O.Canvas = function (w, h) {
     setMatrixUniforms();
     inst.gl.drawArrays(inst.gl.TRIANGLE_STRIP, 0, spriteVertexPositionBuffer.numItems);
 
+    //TODO:: loop through and draw sprites
+    for (i = 0; i < inst.children.length; i += 1) {
+        inst.children[i].render(inst.ctx);
+    }
   }
 
-  inst.gl = getGL();
+  function init() {
+    inst.gl = getGL();
 
-  if (!inst.gl) {
-    console.error("Unable to initialize WebGL. Your browser may not support it.");
-    return;
+    if (!inst.gl) {
+      console.error("Unable to initialize WebGL. Your browser may not support it.");
+      return;
+    }
+
+    setupGL();
+    initShaders();
+    initBuffers();
+
+    inst.children = [];
   }
 
-  setupGL();
-  initShaders();
-  initBuffers();
-
-  inst.render();
-
-  inst.children = [];
+  init();
 
 };
 
 
 O.Sprite = function (t) {
+  var inst = this,
+      vertexPositionBuffer;
+
+  function init() {
+    vertexPositionBuffer = inst.gl.createBuffer();
+    inst.gl.bindBuffer(inst.gl.ARRAY_BUFFER, vertexPositionBuffer);
+    vertices = [
+        0.5,  0.5,  0.0,
+       -0.5,  0.5,  0.0,
+        0.5, -0.5,  0.0,
+       -0.5, -0.5,  0.0
+    ];
+
+    inst.gl.bufferData(inst.gl.ARRAY_BUFFER, new Float32Array(vertices), inst.gl.STATIC_DRAW);
+    vertexPositionBuffer.itemSize = 3;
+    vertexPositionBuffer.numItems = 4;
+  }
+
+  inst.render = function () {
+    //draw sprite
+  }
+
 
 };
