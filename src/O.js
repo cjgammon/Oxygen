@@ -199,7 +199,6 @@ O.Canvas = function (w, h) {
     inst.gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
   }
 
-  /*
   function initBuffers() {
     spriteVertexPositionBuffer = inst.gl.createBuffer();
     inst.gl.bindBuffer(inst.gl.ARRAY_BUFFER, spriteVertexPositionBuffer);
@@ -209,7 +208,7 @@ O.Canvas = function (w, h) {
         0.5, -0.5,  0.0,
        -0.5, -0.5,  0.0
     ];
-    */
+
     inst.gl.bufferData(inst.gl.ARRAY_BUFFER, new Float32Array(vertices), inst.gl.STATIC_DRAW);
     spriteVertexPositionBuffer.itemSize = 3;
     spriteVertexPositionBuffer.numItems = 4;
