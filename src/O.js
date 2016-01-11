@@ -146,75 +146,8 @@ O.Canvas = function (w, h) {
     inst.gl.depthFunc(inst.gl.LEQUAL);
   }
 
-  function getShader(type, str) {
-
-    var shader;
-
-    if (type == 'frag') {
-      shader = inst.gl.createShader(inst.gl.FRAGMENT_SHADER);
-    } else if (type == 'vert') {
-      shader = inst.gl.createShader(inst.gl.VERTEX_SHADER);
-    }
-
-    inst.gl.shaderSource(shader, str);
-    inst.gl.compileShader(shader);
-
-    if (!inst.gl.getShaderParameter(shader, inst.gl.COMPILE_STATUS)) {
-      alert(inst.gl.getShaderInfoLog(shader));
-      return null;
-    }
-
-    return shader;
-  }
-
-  var shaderProgram;
-  var mvMatrix = mat4.create();
-  var pMatrix = mat4.create();
-  var spriteVertexPositionBuffer;
-
-  function initShaders() {
-    var fragmentShader = getShader('frag', O.SHADERS.frag);
-    var vertexShader = getShader('vert', O.SHADERS.vert);
-
-    shaderProgram = inst.gl.createProgram();
-    inst.gl.attachShader(shaderProgram, vertexShader);
-    inst.gl.attachShader(shaderProgram, fragmentShader);
-    inst.gl.linkProgram(shaderProgram);
-
-    if (!inst.gl.getProgramParameter(shaderProgram, inst.gl.LINK_STATUS)) {
-      alert("Could not initialise shaders");
-    }
-
-    inst.gl.useProgram(shaderProgram);
-
-    shaderProgram.vertexPositionAttribute = inst.gl.getAttribLocation(shaderProgram, "aVertexPosition");
-    inst.gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-
-    shaderProgram.pMatrixUniform = inst.gl.getUniformLocation(shaderProgram, "uPMatrix");
-    shaderProgram.mvMatrixUniform = inst.gl.getUniformLocation(shaderProgram, "uMVMatrix");
-  }
-
-  function setMatrixUniforms() {
-    inst.gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-    inst.gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
-  }
-
-  function initBuffers() {
-    spriteVertexPositionBuffer = inst.gl.createBuffer();
-    inst.gl.bindBuffer(inst.gl.ARRAY_BUFFER, spriteVertexPositionBuffer);
-    vertices = [
-        0.5,  0.5,  0.0,
-       -0.5,  0.5,  0.0,
-        0.5, -0.5,  0.0,
-       -0.5, -0.5,  0.0
-    ];
-
-    inst.gl.bufferData(inst.gl.ARRAY_BUFFER, new Float32Array(vertices), inst.gl.STATIC_DRAW);
-    spriteVertexPositionBuffer.itemSize = 3;
-    spriteVertexPositionBuffer.numItems = 4;
-  }
-
   inst.addChild = function (c) {
+    c.setParent(inst);
     inst.children.push(c);
   };
 
@@ -238,18 +171,8 @@ O.Canvas = function (w, h) {
     inst.gl.viewport(0, 0, inst.gl.viewportWidth, inst.gl.viewportHeight);
     inst.gl.clear(inst.gl.COLOR_BUFFER_BIT | inst.gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(45, inst.gl.viewportWidth / inst.gl.viewportHeight, 0.1, 100.0, pMatrix);
-    mat4.identity(mvMatrix);
-
-    inst.gl.bindBuffer(inst.gl.ARRAY_BUFFER, spriteVertexPositionBuffer);
-    inst.gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, spriteVertexPositionBuffer.itemSize, inst.gl.FLOAT, false, 0, 0);
-
-    setMatrixUniforms();
-    inst.gl.drawArrays(inst.gl.TRIANGLE_STRIP, 0, spriteVertexPositionBuffer.numItems);
-
-    //TODO:: loop through and draw sprites
     for (i = 0; i < inst.children.length; i += 1) {
-        inst.children[i].render(inst.ctx);
+        inst.children[i].render();
     }
   }
 
@@ -262,8 +185,6 @@ O.Canvas = function (w, h) {
     }
 
     setupGL();
-    initShaders();
-    initBuffers();
 
     inst.children = [];
   }
@@ -275,11 +196,15 @@ O.Canvas = function (w, h) {
 
 O.Sprite = function (t) {
   var inst = this,
-      vertexPositionBuffer;
+      vertexPositionBuffer,
+      mvMatrix = mat4.create(),
+      pMatrix = mat4.create(),
+      shaderProgram,
+      gl;
 
   function init() {
-    vertexPositionBuffer = inst.gl.createBuffer();
-    inst.gl.bindBuffer(inst.gl.ARRAY_BUFFER, vertexPositionBuffer);
+    vertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
     vertices = [
         0.5,  0.5,  0.0,
        -0.5,  0.5,  0.0,
@@ -287,14 +212,79 @@ O.Sprite = function (t) {
        -0.5, -0.5,  0.0
     ];
 
-    inst.gl.bufferData(inst.gl.ARRAY_BUFFER, new Float32Array(vertices), inst.gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     vertexPositionBuffer.itemSize = 3;
     vertexPositionBuffer.numItems = 4;
+
+    initShaders();
+  };
+
+  function getShader(type, str) {
+
+    var shader;
+
+    if (type == 'frag') {
+      shader = gl.createShader(gl.FRAGMENT_SHADER);
+    } else if (type == 'vert') {
+      shader = gl.createShader(gl.VERTEX_SHADER);
+    }
+
+    gl.shaderSource(shader, str);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      alert(gl.getShaderInfoLog(shader));
+      return null;
+    }
+
+    return shader;
+  };
+
+  function initShaders() {
+    var fragmentShader = getShader('frag', O.SHADERS.frag);
+    var vertexShader = getShader('vert', O.SHADERS.vert);
+
+    shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      alert("Could not initialise shaders");
+    }
+
+    gl.useProgram(shaderProgram);
+
+    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+  }
+
+  inst.setParent = function (p) {
+    inst.parent = p;
+    gl = inst.parent.gl;
+    init();
   }
 
   inst.render = function () {
-    //draw sprite
-  }
+    if (!gl) {
+      return;
+    }
 
+    //position matrices
+    mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+    mat4.identity(mvMatrix);
+
+    //draw sprite
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexPositionBuffer.numItems);
+
+  }
 
 };
