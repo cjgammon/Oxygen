@@ -137,7 +137,7 @@ O.Canvas = function (w, h) {
 
     return null;
   }
-  /*
+
   function setupGL() {
     inst.gl.viewportWidth = inst.el.width;
     inst.gl.viewportHeight = inst.el.height;
@@ -145,57 +145,6 @@ O.Canvas = function (w, h) {
     inst.gl.enable(inst.gl.DEPTH_TEST);
     inst.gl.depthFunc(inst.gl.LEQUAL);
   }
-  */
-  //var shaderProgram;
-  //var mvMatrix = mat4.create();
-  //var pMatrix = mat4.create();
-  //var spriteVertexPositionBuffer;
-
-  /*
-  function initShaders() {
-    var fragmentShader = getShader('frag', O.SHADERS.frag);
-    var vertexShader = getShader('vert', O.SHADERS.vert);
-
-    shaderProgram = inst.gl.createProgram();
-    inst.gl.attachShader(shaderProgram, vertexShader);
-    inst.gl.attachShader(shaderProgram, fragmentShader);
-    inst.gl.linkProgram(shaderProgram);
-
-    if (!inst.gl.getProgramParameter(shaderProgram, inst.gl.LINK_STATUS)) {
-      alert("Could not initialise shaders");
-    }
-
-    inst.gl.useProgram(shaderProgram);
-
-    shaderProgram.vertexPositionAttribute = inst.gl.getAttribLocation(shaderProgram, "aVertexPosition");
-    inst.gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-
-    shaderProgram.pMatrixUniform = inst.gl.getUniformLocation(shaderProgram, "uPMatrix");
-    shaderProgram.mvMatrixUniform = inst.gl.getUniformLocation(shaderProgram, "uMVMatrix");
-  }
-  */
-  /*
-  function setMatrixUniforms() {
-    inst.gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-    inst.gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
-  }
-  */
-
-  /*
-  function initBuffers() {
-    spriteVertexPositionBuffer = inst.gl.createBuffer();
-    inst.gl.bindBuffer(inst.gl.ARRAY_BUFFER, spriteVertexPositionBuffer);
-    vertices = [
-        0.5,  0.5,  0.0,
-       -0.5,  0.5,  0.0,
-        0.5, -0.5,  0.0,
-       -0.5, -0.5,  0.0
-    ];
-    inst.gl.bufferData(inst.gl.ARRAY_BUFFER, new Float32Array(vertices), inst.gl.STATIC_DRAW);
-    spriteVertexPositionBuffer.itemSize = 3;
-    spriteVertexPositionBuffer.numItems = 4;
-  }
-  */
 
   inst.addChild = function (c) {
     c.setParent(inst);
@@ -221,20 +170,7 @@ O.Canvas = function (w, h) {
 
     inst.gl.viewport(0, 0, inst.gl.viewportWidth, inst.gl.viewportHeight);
     inst.gl.clear(inst.gl.COLOR_BUFFER_BIT | inst.gl.DEPTH_BUFFER_BIT);
-    /*
 
-    mat4.perspective(45, inst.gl.viewportWidth / inst.gl.viewportHeight, 0.1, 100.0, pMatrix);
-    mat4.identity(mvMatrix);
-
-    inst.gl.bindBuffer(inst.gl.ARRAY_BUFFER, spriteVertexPositionBuffer);
-    inst.gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, spriteVertexPositionBuffer.itemSize, inst.gl.FLOAT, false, 0, 0);
-
-    setMatrixUniforms();
-    inst.gl.drawArrays(inst.gl.TRIANGLE_STRIP, 0, spriteVertexPositionBuffer.numItems);
-    */
-
-    console.log(inst.children.length, inst.children);
-    //TODO:: loop through and draw sprites
     for (i = 0; i < inst.children.length; i += 1) {
         inst.children[i].render();
     }
@@ -248,9 +184,7 @@ O.Canvas = function (w, h) {
       return;
     }
 
-    //setupGL();
-    //initShaders();
-    //initBuffers();
+    setupGL();
 
     inst.children = [];
   }
