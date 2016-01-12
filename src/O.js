@@ -90,6 +90,62 @@ mat4.translate = function (out, a, v) {
 
     return out;
 };
+mat4.rotate = function (out, a, rad) {
+    var s = Math.sin(rad),
+        c = Math.cos(rad),
+        a00 = a[0],
+        a01 = a[1],
+        a02 = a[2],
+        a03 = a[3],
+        a10 = a[4],
+        a11 = a[5],
+        a12 = a[6],
+        a13 = a[7];
+
+    if (a !== out) { // If the source and destination differ, copy the unchanged last row
+        out[8]  = a[8];
+        out[9]  = a[9];
+        out[10] = a[10];
+        out[11] = a[11];
+        out[12] = a[12];
+        out[13] = a[13];
+        out[14] = a[14];
+        out[15] = a[15];
+    }
+
+    // Perform axis-specific matrix multiplication
+    out[0] = a00 * c + a10 * s;
+    out[1] = a01 * c + a11 * s;
+    out[2] = a02 * c + a12 * s;
+    out[3] = a03 * c + a13 * s;
+    out[4] = a10 * c - a00 * s;
+    out[5] = a11 * c - a01 * s;
+    out[6] = a12 * c - a02 * s;
+    out[7] = a13 * c - a03 * s;
+    return out;
+};
+mat4.scale = function(out, a, v) {
+    var x = v[0], y = v[1], z = v[2];
+
+    out[0] = a[0] * x;
+    out[1] = a[1] * x;
+    out[2] = a[2] * x;
+    out[3] = a[3] * x;
+    out[4] = a[4] * y;
+    out[5] = a[5] * y;
+    out[6] = a[6] * y;
+    out[7] = a[7] * y;
+    out[8] = a[8] * z;
+    out[9] = a[9] * z;
+    out[10] = a[10] * z;
+    out[11] = a[11] * z;
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+    return out;
+};
+
 
 var O = {};
 O.SHADERS = {
@@ -184,6 +240,7 @@ O.Canvas = function (w, h) {
 
   function init() {
     inst.gl = getGL();
+    inst.gl.x = Math.random();
 
     if (!inst.gl) {
       console.error("Unable to initialize WebGL. Your browser may not support it.");
@@ -286,8 +343,8 @@ O.Sprite = function (t) {
   };
 
   function initShaders() {
-    var fragmentShader = getShader('frag', O.SHADERS.frag);
-    var vertexShader = getShader('vert', O.SHADERS.vert);
+    var fragmentShader = getShader('frag', O.SHADERS.frag),
+        vertexShader = getShader('vert', O.SHADERS.vert);
 
     shaderProgram = gl.createProgram();
 
@@ -321,13 +378,18 @@ O.Sprite = function (t) {
   }
 
   function initBuffers() {
-    var aspect = inst.parent.w / inst.parent.h;
+
+    var vertices,
+        textureCoords,
+        vertexIndices,
+        _w = t.width / inst.parent.w,
+        _h = t.height / inst.parent.h;
 
     vertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
     vertices = [
-        1,  1,  0.0, -1,  1,  0.0,
-        1, -1,  0.0, -1, -1,  0.0
+        _w,  _h,  0.0, -_w,  _h,  0.0,
+        _w, -_h,  0.0, -_w, -_h,  0.0
     ];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     vertexPositionBuffer.itemSize = 3;
@@ -335,7 +397,7 @@ O.Sprite = function (t) {
 
     vertexTextureCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordBuffer);
-    var textureCoords = [
+    textureCoords = [
         // Front face
         1.0, 0.0,
         0.0, 0.0,
@@ -348,8 +410,8 @@ O.Sprite = function (t) {
 
     vertexIndexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
-    var vertexIndices = [
-      0, 1, 2,      0, 2, 3,    // Front face
+    vertexIndices = [
+      0, 1, 2, 0, 2, 3,    // Front face
     ];
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexIndices), gl.STATIC_DRAW);
     vertexIndexBuffer.itemSize = 1;
@@ -359,6 +421,8 @@ O.Sprite = function (t) {
   inst.setParent = function (p) {
     inst.parent = p;
     gl = inst.parent.gl;
+
+    console.log(gl.x);
     init();
   }
 
@@ -371,9 +435,18 @@ O.Sprite = function (t) {
     mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
     mat4.identity(mvMatrix);
 
-    mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
+mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
+mat4.translate(mvMatrix, mvMatrix, [inst.ox / gl.viewportWidth, inst.oy / gl.viewportHeight, 0]);
+mat4.rotate(mvMatrix, mvMatrix, inst.r * Math.PI / 180);
+mat4.scale(mvMatrix, mvMatrix, [inst._sx, inst._sy, 1.0]);
+mat4.translate(mvMatrix, mvMatrix, [-inst.x / gl.viewportWidth, -inst.y / gl.viewportHeight, 0]);
+mat4.translate(mvMatrix, mvMatrix, [-inst.ox / gl.viewportWidth, -inst.oy / gl.viewportHeight, 0]);
+
+mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
 
     //draw sprite
+    gl.useProgram(shaderProgram);
+
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
