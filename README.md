@@ -3,7 +3,7 @@ Intended to be a SUPER Lightweight WebGL 2D Display List for drawing and animati
 
 File size: **6.5kb**
 
-Below is an example of how to use with a 256 x 256 texture named `nehe.gif`.
+Below is an example of how to use with a texture named `nehe.gif`.
 ```
 <html>
     <head>

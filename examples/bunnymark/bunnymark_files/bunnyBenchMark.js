@@ -52,9 +52,13 @@ function onReady()
 	count = startBunnyCount;
 	counter.innerHTML = count + " BUNNIES";
 
+	/*
 	currentTexture = new Image();
 	currentTexture.src = "bunny.png";
 	currentTexture.onload = go;
+	*/
+	currentTexture = stage.createTexture('bunny.png', go);
+
 
 	function go() {
 		for (var i = 0; i < startBunnyCount; i++)

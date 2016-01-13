@@ -232,6 +232,39 @@ O.Canvas = function (w, h, opts) {
     }
   };
 
+  inst.createTexture = function (img, cb) {
+    var gl = inst.gl,
+        instance = this;
+
+    instance.tex = gl.createTexture();
+
+    if (typeof(img) == 'string') {
+      instance.tex.image = new Image();
+      instance.tex.image.src = img;
+    } else {
+      instance.tex.image = img;
+    }
+
+    instance.tex.image.onload = function () {
+      gl.bindTexture(gl.TEXTURE_2D, instance.tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, instance.tex.image);
+
+      //TODO:: handle textures seperately for repeat use
+      //TODO:: manage sprite sheet cropping
+
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      cb();
+    }
+
+    return instance;
+  }
+
   inst.render = function () {
     var i;
 
@@ -316,9 +349,10 @@ O.Sprite = function (t) {
 
     initShaders();
     initBuffers();
-    initTexture();
+  //  initTexture();
   };
 
+/*
   function initTexture() {
       inst.tex = gl.createTexture();
       inst.tex.image = new Image();
@@ -328,6 +362,7 @@ O.Sprite = function (t) {
 
       inst.tex.image.src = t.src;
   }
+*/
 
   function getShader(type, str) {
 
@@ -377,6 +412,7 @@ O.Sprite = function (t) {
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
   }
 
+/*
   function handleLoadedTexture(texture) {
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
@@ -391,14 +427,15 @@ O.Sprite = function (t) {
 
       gl.bindTexture(gl.TEXTURE_2D, null);
   }
+*/
 
   function initBuffers() {
 
     var vertices,
         textureCoords,
         vertexIndices,
-        _w = t.width / inst.parent.w,
-        _h = t.height / inst.parent.h;
+        _w = t.tex.image.width / inst.parent.w,
+        _h = t.tex.image.height / inst.parent.h;
 
     vertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
@@ -437,7 +474,6 @@ O.Sprite = function (t) {
     inst.parent = p;
     gl = inst.parent.gl;
 
-    console.log(gl.x);
     init();
   }
 
@@ -469,7 +505,7 @@ O.Sprite = function (t) {
     gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, inst.tex);
+    gl.bindTexture(gl.TEXTURE_2D, t.tex);
     gl.uniform1i(shaderProgram.samplerUniform, 0);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
