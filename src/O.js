@@ -172,8 +172,9 @@ O.SHADERS = {
     }"
 };
 
-O.Canvas = function (w, h) {
-  var inst = this;
+O.Canvas = function (w, h, opts) {
+  var inst = this,
+      _contextOptions = opts || {alpha: false};
 
   if (typeof(w) == "string") {
       inst.el = document.getElementById(w);
@@ -191,7 +192,7 @@ O.Canvas = function (w, h) {
     var gl;
 
     try {
-      gl = inst.el.getContext("webgl") || inst.el.getContext("experimental-webgl");
+      gl = inst.el.getContext("webgl", _contextOptions) || inst.el.getContext("experimental-webgl", _contextOptions);
       return gl;
     } catch(e) {
       console.error("problem initializing webgl.");
@@ -203,7 +204,11 @@ O.Canvas = function (w, h) {
   function setupGL() {
     inst.gl.viewportWidth = inst.el.width;
     inst.gl.viewportHeight = inst.el.height;
-    inst.gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    if (_contextOptions.alpha) {
+      inst.gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    } else {
+      inst.gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    }
     inst.gl.enable(inst.gl.DEPTH_TEST);
     inst.gl.depthFunc(inst.gl.LEQUAL);
   }
@@ -232,6 +237,9 @@ O.Canvas = function (w, h) {
 
     inst.gl.viewport(0, 0, inst.gl.viewportWidth, inst.gl.viewportHeight);
     inst.gl.clear(inst.gl.COLOR_BUFFER_BIT | inst.gl.DEPTH_BUFFER_BIT);
+
+    inst.gl.blendFunc(inst.gl.SRC_ALPHA, inst.gl.ONE_MINUS_SRC_ALPHA);
+    inst.gl.enable(inst.gl.BLEND);
 
     for (i = 0; i < inst.children.length; i += 1) {
         inst.children[i].render();
@@ -372,8 +380,15 @@ O.Sprite = function (t) {
   function handleLoadedTexture(texture) {
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+
+      //TODO:: handle textures seperately for repeat use
+      //TODO:: manage sprite sheet cropping
+
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
       gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
@@ -435,14 +450,14 @@ O.Sprite = function (t) {
     mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
     mat4.identity(mvMatrix);
 
-mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
-mat4.translate(mvMatrix, mvMatrix, [inst.ox / gl.viewportWidth, inst.oy / gl.viewportHeight, 0]);
-mat4.rotate(mvMatrix, mvMatrix, inst.r * Math.PI / 180);
-mat4.scale(mvMatrix, mvMatrix, [inst._sx, inst._sy, 1.0]);
-mat4.translate(mvMatrix, mvMatrix, [-inst.x / gl.viewportWidth, -inst.y / gl.viewportHeight, 0]);
-mat4.translate(mvMatrix, mvMatrix, [-inst.ox / gl.viewportWidth, -inst.oy / gl.viewportHeight, 0]);
+    mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
+    mat4.translate(mvMatrix, mvMatrix, [inst.ox / gl.viewportWidth, inst.oy / gl.viewportHeight, 0]);
+    mat4.rotate(mvMatrix, mvMatrix, inst.r * Math.PI / 180);
+    mat4.scale(mvMatrix, mvMatrix, [inst._sx, inst._sy, 1.0]);
+    mat4.translate(mvMatrix, mvMatrix, [-inst.x / gl.viewportWidth, -inst.y / gl.viewportHeight, 0]);
+    mat4.translate(mvMatrix, mvMatrix, [-inst.ox / gl.viewportWidth, -inst.oy / gl.viewportHeight, 0]);
 
-mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
+    mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewportHeight, 0]);
 
     //draw sprite
     gl.useProgram(shaderProgram);
@@ -462,7 +477,6 @@ mat4.translate(mvMatrix, mvMatrix, [inst.x / gl.viewportWidth, inst.y / gl.viewp
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexPositionBuffer.numItems);
-
   }
 
 };
