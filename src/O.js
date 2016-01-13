@@ -174,6 +174,7 @@ O.SHADERS = {
 
 O.Canvas = function (w, h, opts) {
   var inst = this,
+      gl,
       _contextOptions = opts || {alpha: false};
 
   if (typeof(w) == "string") {
@@ -189,11 +190,11 @@ O.Canvas = function (w, h, opts) {
   }
 
   function getGL() {
-    var gl;
+    var _gl;
 
     try {
-      gl = inst.el.getContext("webgl", _contextOptions) || inst.el.getContext("experimental-webgl", _contextOptions);
-      return gl;
+      _gl = inst.el.getContext("webgl", _contextOptions) || inst.el.getContext("experimental-webgl", _contextOptions);
+      return _gl;
     } catch(e) {
       console.error("problem initializing webgl.");
     }
@@ -211,6 +212,56 @@ O.Canvas = function (w, h, opts) {
     }
     inst.gl.enable(inst.gl.DEPTH_TEST);
     inst.gl.depthFunc(inst.gl.LEQUAL);
+  }
+
+  function getShader(type, str) {
+
+    var shader;
+
+    if (type == 'frag') {
+      shader = gl.createShader(gl.FRAGMENT_SHADER);
+    } else if (type == 'vert') {
+      shader = gl.createShader(gl.VERTEX_SHADER);
+    }
+
+    gl.shaderSource(shader, str);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      alert(gl.getShaderInfoLog(shader));
+      return null;
+    }
+
+    return shader;
+  };
+
+  function initShaders() {
+    var fragmentShader = getShader('frag', O.SHADERS.frag),
+        vertexShader = getShader('vert', O.SHADERS.vert);
+
+    shaderProgram = gl.createProgram();
+
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      console.error("Could not initialise shaders");
+      console.error(gl.getProgramInfoLog(shaderProgram));
+    }
+
+    gl.useProgram(shaderProgram);
+
+    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+    shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+    gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+
+    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+
+    inst.shaderProgram = shaderProgram;
   }
 
   inst.addChild = function (c) {
@@ -233,36 +284,7 @@ O.Canvas = function (w, h, opts) {
   };
 
   inst.createTexture = function (img, cb) {
-    var gl = inst.gl,
-        instance = this;
-
-    instance.tex = gl.createTexture();
-
-    if (typeof(img) == 'string') {
-      instance.tex.image = new Image();
-      instance.tex.image.src = img;
-    } else {
-      instance.tex.image = img;
-    }
-
-    instance.tex.image.onload = function () {
-      gl.bindTexture(gl.TEXTURE_2D, instance.tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, instance.tex.image);
-
-      //TODO:: handle textures seperately for repeat use
-      //TODO:: manage sprite sheet cropping
-
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-      gl.bindTexture(gl.TEXTURE_2D, null);
-
-      cb();
-    }
-
-    return instance;
+    return new O.Texture(inst.gl, img, cb);
   }
 
   inst.render = function () {
@@ -281,6 +303,7 @@ O.Canvas = function (w, h, opts) {
 
   function init() {
     inst.gl = getGL();
+    gl = inst.gl;
     inst.gl.x = Math.random();
 
     if (!inst.gl) {
@@ -289,6 +312,7 @@ O.Canvas = function (w, h, opts) {
     }
 
     setupGL();
+    initShaders();
 
     inst.children = [];
   }
@@ -297,7 +321,7 @@ O.Canvas = function (w, h, opts) {
 
 };
 
-
+//TODO:: manage sprite sheet cropping
 O.Sprite = function (t) {
   var inst = this,
       vertexPositionBuffer,
@@ -346,24 +370,11 @@ O.Sprite = function (t) {
   });
 
   function init() {
-
-    initShaders();
+    //initShaders();
     initBuffers();
-  //  initTexture();
   };
 
 /*
-  function initTexture() {
-      inst.tex = gl.createTexture();
-      inst.tex.image = new Image();
-      inst.tex.image.onload = function () {
-          handleLoadedTexture(inst.tex);
-      }
-
-      inst.tex.image.src = t.src;
-  }
-*/
-
   function getShader(type, str) {
 
     var shader;
@@ -411,24 +422,7 @@ O.Sprite = function (t) {
     shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
   }
-
-/*
-  function handleLoadedTexture(texture) {
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
-
-      //TODO:: handle textures seperately for repeat use
-      //TODO:: manage sprite sheet cropping
-
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-      gl.bindTexture(gl.TEXTURE_2D, null);
-  }
 */
-
   function initBuffers() {
 
     var vertices,
@@ -472,13 +466,14 @@ O.Sprite = function (t) {
 
   inst.setParent = function (p) {
     inst.parent = p;
+    shaderProgram = inst.parent.shaderProgram;
     gl = inst.parent.gl;
 
     init();
   }
 
   inst.render = function () {
-    if (!gl) {
+    if (!gl || !shaderProgram) {
       return;
     }
 
@@ -516,3 +511,32 @@ O.Sprite = function (t) {
   }
 
 };
+
+
+O.Texture = function (gl, img, cb) {
+  var inst = this;
+
+  inst.tex = gl.createTexture();
+
+  if (typeof(img) == 'string') {
+    inst.tex.image = new Image();
+    inst.tex.image.src = img;
+  } else {
+    inst.tex.image = img;
+  }
+
+  inst.tex.image.onload = function () {
+    gl.bindTexture(gl.TEXTURE_2D, inst.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, inst.tex.image);
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    cb();
+  }
+
+}
