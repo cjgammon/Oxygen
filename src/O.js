@@ -287,6 +287,10 @@ O.Canvas = function (w, h, opts) {
     return new O.Texture(inst.gl, img, cb);
   }
 
+  inst.createSprite = function () {
+    //return new O.Sprite();
+  }
+
   inst.render = function () {
     var i;
 
@@ -370,59 +374,10 @@ O.Sprite = function (t) {
   });
 
   function init() {
-    //initShaders();
     initBuffers();
   };
 
-/*
-  function getShader(type, str) {
-
-    var shader;
-
-    if (type == 'frag') {
-      shader = gl.createShader(gl.FRAGMENT_SHADER);
-    } else if (type == 'vert') {
-      shader = gl.createShader(gl.VERTEX_SHADER);
-    }
-
-    gl.shaderSource(shader, str);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      alert(gl.getShaderInfoLog(shader));
-      return null;
-    }
-
-    return shader;
-  };
-
-  function initShaders() {
-    var fragmentShader = getShader('frag', O.SHADERS.frag),
-        vertexShader = getShader('vert', O.SHADERS.vert);
-
-    shaderProgram = gl.createProgram();
-
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-    gl.linkProgram(shaderProgram);
-
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      console.error("Could not initialise shaders");
-      console.error(gl.getProgramInfoLog(shaderProgram));
-    }
-
-    gl.useProgram(shaderProgram);
-
-    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-
-    shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
-    gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
-
-    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
-    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
-  }
-*/
+  //TODO:: move this outside of sprite?
   function initBuffers() {
 
     var vertices,
